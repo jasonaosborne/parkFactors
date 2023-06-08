@@ -1,0 +1,93 @@
+---
+title: "Plotting HR Frequencies by Park"
+author: "Jason Osborne"
+date: "2023-06-08"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE, out.width="60%",cache=TRUE)
+```
+
+Some preliminary data processing is not covered here, but we begin
+by loading a $(60 \times 4)$ data frame of averages over the
+2012-2021 time period whose first several rows are shown below:
+```{r}
+load("allhrtables.RData")
+allhrtables %>% head
+```
+Then we compute averages over the 10 year time period from 2012-2021:
+```{r, echo=TRUE, cache=TRUE}
+allhrtables %>% group_by(park, BAT_HAND_CD) %>% 
+  summarize(Freq_mean=mean(Freq),fitted_mean=mean(fitted)) ->
+  allhrtables.avgs 
+```
+
+Now, we will reproduce the plot of observed and fitted home run
+frequencies against park, separately for RHB and LHB.
+
+```{r, cache=TRUE}
+allhrtables.avgs %>% filter(BAT_HAND_CD=="R") -> allhrtables.avgs.R
+allhrtables.avgs %>% filter(BAT_HAND_CD=="L") -> allhrtables.avgs.L
+
+allhrtables.avgs.R$park <- factor(allhrtables.avgs.R$park,
+                                  levels=allhrtables.avgs.R$park[
+                                    order(allhrtables.avgs.R$fitted_mean)])
+
+allhrtables.avgs.R %>% 
+  pivot_longer(cols=c(Freq_mean,fitted_mean),values_to="ProbHR",names_to="Obs_fitted") ->
+allhrtables.avgs.R.wide 
+
+allhrtables.avgs.L$park <- factor(allhrtables.avgs.L$park,
+                                  levels=allhrtables.avgs.L$park[
+                                    order(allhrtables.avgs.L$fitted_mean)])
+
+allhrtables.avgs.L %>% 
+  pivot_longer(cols=c(Freq_mean,fitted_mean),values_to="ProbHR",names_to="Obs_fitted") ->
+allhrtables.avgs.L.wide 
+```
+
+\newpage
+
+Not we'll `ggplot` them:
+```{r, fig.align="left",fig.width="40$"}
+ggplot(allhrtables.avgs.R.wide,aes(y=ProbHR,x=park,color=Obs_fitted)) + 
+  geom_point() + 
+  ggtitle("Fitted and observed HR freqs for RHB, Pr(HR) ~ BH*PH*Park") +  
+  theme(axis.text.x=element_text(angle=60))
+```
+```{r, echo=FALSE,fig.align="right",fig.width="40$"}
+ggplot(allhrtables.avgs.L.wide,aes(y=ProbHR,x=park,color=Obs_fitted)) + 
+  geom_point() + 
+  ggtitle("Fitted and observed HR freqs \n Pr(HR) ~ BH*PH*Park \n LHB, 10 seasons") + 
+  theme(axis.text.x=element_text(angle=60))
+```
+
+```{r, echo=TRUE, eval=TRUE}
+library(knitr)
+knit_exit()
+``` 
+
+Now, I'll repeat the construction from last week that averages over batting
+hand:
+```{r, echo=TRUE}
+allhrtables %>% group_by(park) %>% 
+  summarize(Freq_mean=mean(Freq),fitted_mean=mean(fitted)) ->
+  allhrtables.bothavgs 
+
+allhrtables.bothavgs$park <- factor(allhrtables.bothavgs$park,
+  levels=allhrtables.bothavgs$park[
+    order(allhrtables.bothavgs$fitted_mean)])
+
+allhrtables.bothavgs %>% 
+  pivot_longer(cols=c(Freq_mean,fitted_mean),values_to="ProbHR",names_to="Obs_fitted") ->
+allhrtables.bothavgs.wide 
+
+ggplot(allhrtables.bothavgs.wide,aes(y=ProbHR,x=park,color=Obs_fitted)) + 
+  geom_point() + 
+  ggtitle("Fitted and observed HR freqs \n Pr(HR) ~ BH*PH*Park \n RHB, 10 seasons") + 
+  theme(axis.text.x=element_text(angle=60))
+```
+
+<!-- dev.copy2pdf(file="hrfrqVparkRHB_12_22.pdf") -->
+<!-- dev.copy2pdf(file="hrfrqVparkLHB_12_22.pdf") -->
