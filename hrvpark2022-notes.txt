@@ -1,0 +1,89 @@
+Adjusted down: PIT (-4.7%) SFN, CHA, CHN (-2%), TOR(-1%), BAL(-1%)
+adjusted up:   ARI (5%), BOS(2.5%), SEA (2%), TEX(1.6%), NYN (1.5%)
+
+Overall bpcombo frqs:
+bpfrqs.2022
+           PIT_HAND_CD
+BAT_HAND_CD          L          R
+          L 0.07108409 0.32439083
+          R 0.20257948 0.40194560
+
+League-wide, RHBLHP was most favorable for HR, w LHBLHP considerably least:
+   hr BAT_HAND_CD PIT_HAND_CD       Freq
+1 TRUE           L           L 0.02140484
+2 TRUE           R           L 0.03088395
+3 TRUE           L           R 0.02836291
+4 TRUE           R           R 0.02902631
+
+Why is PIT adjusted down?  They had comparatively fewer matchups (14.7% v 20.2%)
+and (33% v 40%) for the two most conducive bpcombo (RHBLHP, RHBRHP), also more 
+matchups (8% v 7.1%) for least conducive.
+
+data2022.12vars %>% filter(park=="PIT") %>% 
+select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>% prop.table
+
+           PIT_HAND_CD
+BAT_HAND_CD          L          R
+          L 0.07984421 0.43930542
+          R 0.14670562 0.33414476
+with observed hr freqs:
+  BAT_HAND_CD PIT_HAND_CD  hrppa
+  <chr>       <chr>        <dbl>
+1 L           L           0.0224
+2 L           R           0.0318
+3 R           L           0.0210
+4 R           R           0.0214
+
+Same story for SFN?  Comparing the table below w league wide bpcombo freqs,
+we see elevated LHBLHP (+37% !) and RHBLHP and depressed RHBRHP
+
+> data2022.12vars %>% filter(park=="SFN") %>% 
++   select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>% prop.table
+           PIT_HAND_CD
+BAT_HAND_CD          L          R
+          L 0.09774067 0.32383759
+          R 0.23739358 0.34102816
+> 
+> data2022.12vars %>% filter(park=="SFN") %>% group_by(BAT_HAND_CD,PIT_HAND_CD) %>%
++   summarize(hrppa=mean(hr)) %>% print
+`summarise()` has grouped output by 'BAT_HAND_CD'. You can override using the `.groups`
+argument.
+# A tibble: 4 × 3
+# Groups:   BAT_HAND_CD [2]
+  BAT_HAND_CD PIT_HAND_CD  hrppa
+  <chr>       <chr>        <dbl>
+1 L           L           0.0218
+2 L           R           0.0202
+3 R           L           0.0283
+4 R           R           0.0182
+>
+
+In fact, let us just  express the team bpfreq relative to the league wide freq using division:
+
+bpfrq.sfn / bpfrqs.2022
+ PIT_HAND_CD
+BAT_HAND_CD         L         R
+          L 1.3750007 0.9982945
+          R 1.1718540 0.8484436
+The RL and RR just about cancel, so the adjustment due to inflated LL.
+
+One more: the White Sox.  Look at this, 59% fewer LL matchups, but also 28% fewer RL matchups.
+This 28% fewer results in an adjustment down I suppose.
+
+> bpfrq.CHA/bpfrqs.2022
+           PIT_HAND_CD
+BAT_HAND_CD         L         R
+          L 0.4169095 0.9395374
+          R 0.7242621 1.2908871
+
+How about a table with these frequencies relative to league-wide, for the teams with the
+largest adjustments:
+
+
+
+
+
+# Batter hand marginals
+# Pitcher hand marginals
+# Conditionally on batter hand
+# Conditionally on pitcher hand

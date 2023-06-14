@@ -1,0 +1,2 @@
+The zoom discussion from June 8 pertained to plots
+generated from the files in this directory .
