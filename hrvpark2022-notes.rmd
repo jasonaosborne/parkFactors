@@ -141,7 +141,7 @@ For other teams, we compute team combo frequencies relative era combo frequencie
 allyrs.12vars %>% group_by(BAT_HAND_CD,PIT_HAND_CD) %>% summarize(count=n()) %>%
   ungroup %>% mutate(relFreq=count/sum(count)) -> bptotals
 teambpfrqs.tall %>% inner_join(bptotals) %>% 
-  mutate(team2era = relFreq/Freq) -> team2era 
+  mutate(team2era = Freq/relFreq) -> team2era 
 team2era %>%  arrange(park,BAT_HAND_CD,PIT_HAND_CD)  %>% 
   filter(park %in% c("CLE","SLN","LAN","DET","MIN","TOR")) %>% print
 ```
@@ -149,3 +149,4 @@ A reminder of which combos lead to the most HRs
 ```{r hrfrq}
 allyrs.12vars %>% group_by(BAT_HAND_CD,PIT_HAND_CD) %>% summarize(hrfrq=mean(hr),hrsum=sum(hr))
 ```
+Now the other adjusteds
