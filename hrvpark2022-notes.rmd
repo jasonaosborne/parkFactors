@@ -1,6 +1,6 @@
 ---
 title:  "Adjusted Home Run Frequencies" 
-author: Jason Osborne
+author: Jason Osborne and Rich Levine
 output:
   pdf_document
 ---
@@ -9,26 +9,31 @@ output:
 knitr::opts_chunk$set(echo=TRUE,eval=TRUE,message=FALSE,cache=TRUE,fig.align="center",out.width="50%")
 ```
 
-# Adjusted hr frequencies, 2022.
+# Adjusted hr frequencies, 2012-2021.
 
 Let us see how the batter-pitcher combination (`bpcombo`) frequencies have
 varied over time
 
-```{r plot1, out.width="50%", fig.align="center"}
+```{r plot1, out.width="50%", fig.align="center",cache=TRUE,echo=FALSE}
 load("./allyrs.12vars.RData")
 allyrs.12vars %>% select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>% prop.table -> bpfrqs.era
 # all four combo frqs
 bpfrqs.era
 # batter hand
+print("by Batter Hand (row sums)")
 bpfrqs.era %>% rowSums()
 # pitcher hand
+print("by Pitcher Hand (col sums)")
 bpfrqs.era %>% colSums()
-# conditionally on batter hand, P(LHP|LHB), P(LHP|RHB)
-bpfrqs.era[1,1]/sum(bpfrqs.era[1,])
-bpfrqs.era[2,1]/sum(bpfrqs.era[2,])
-# conditionally on pitcher hand, P(LHB|LHP), P(LHB|RHP)
-bpfrqs.era[1,1]/sum(bpfrqs.era[,1])
-bpfrqs.era[1,2]/sum(bpfrqs.era[,2])
+# conditionally on batter hand
+print("Conditionally on Batter Hand")
+allyrs.12vars %>% select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>% prop.table(margin="BAT_HAND_CD") 
+# conditionally on pitcher hand
+print("Conditionally on Pitcher Hand")
+allyrs.12vars %>% select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>% prop.table(margin="PIT_HAND_CD") 
+# later, we'll look at these frs as a vector
+print("All four relative freqs as a vector")
+bpfrqs.era %>% as.data.frame  -> bpfrqs.era.vec ; bpfrqs.era.vec %>% print
 ```
 
 \newpage
@@ -90,7 +95,7 @@ at all independent.  However, we average anyway ...
 A technique worth mentioning in the construction of this plot is to achieve
 an ordering of parks on the horizontal axis according to either the observed
 or adjusted home run rate by so ordering the levels of park as a factor.
-```{r orderpark}
+```{r orderpark, cache=TRUE}
 hrsummary.wide$park <- factor(hrsummary.wide$park,
                               levels=hrsummary.wide$park[order(hrsummary.wide$adjhr)])
 hrsummary.wide %>% pivot_longer(cols=c("adjhr","obshr"),values_to="phr") ->
@@ -101,4 +106,46 @@ Now `ggplot` can be used ...
 ggplot(hrsummary.tall) + geom_point(aes(y=phr,x=park,color=name)) + 
   theme(axis.text.x=element_text(angle=50)) + 
   ggtitle("HR Freqs, adj and observed \n 2012-2021")
+```
+
+\newpage
+
+Ok, let us consider those teams for which the observed and adjusted hr freqs were different.
+```{r rankdiffs}
+hrsummary.wide %>% mutate(adjmnt=adjhr-obshr) %>% 
+  arrange(abs(adjmnt)) -> hrsummary.wide; hrsummary.wide %>% tail
+```
+These differences between the observed relative frequencies are small, but the number of plate appearances is large:
+```{r pacount}
+allyrs.12vars %>% group_by(park) %>% summarize(pa=n(),hr=sum(hr)) %>% 
+  inner_join(hrsummary.wide) %>% mutate(hrdiff=adjmnt*pa) %>% 
+  arrange(abs(hrdiff)) -> hrsummary.wide ; hrsummary.wide %>% tail
+```
+Were bpcombo freqs for `CLE` different from those of the rest of the league?
+```{r bpcombos}
+allyrs.12vars %>% select(park,BAT_HAND_CD,PIT_HAND_CD) %>% table %>%
+  prop.table(margin=c("park")) %>% as.data.frame -> teambpfrqs.tall
+teambpfrqs.tall %>% filter(park=="CLE") %>% print
+# Glancing back at era frequencies:
+bpfrqs.era.vec %>% print 
+```
+For whatever reason, there were considerably more PA involving Pitchers and Batters
+of the same hand (RHBRHP or LHBLHP) at Jacobs Field, resulting in upward
+adjustment to era frequencies (so long as CLE conditional HR rates not too different.)
+
+\newpage
+
+For other teams, we compute team combo frequencies relative era combo frequencies
+
+```{r team2era}
+allyrs.12vars %>% group_by(BAT_HAND_CD,PIT_HAND_CD) %>% summarize(count=n()) %>%
+  ungroup %>% mutate(relFreq=count/sum(count)) -> bptotals
+teambpfrqs.tall %>% inner_join(bptotals) %>% 
+  mutate(team2era = relFreq/Freq) -> team2era 
+team2era %>%  arrange(park,BAT_HAND_CD,PIT_HAND_CD)  %>% 
+  filter(park %in% c("CLE","SLN","LAN","DET","MIN","TOR")) %>% print
+```
+A reminder of which combos lead to the most HRs
+```{r hrfrq}
+allyrs.12vars %>% group_by(BAT_HAND_CD,PIT_HAND_CD) %>% summarize(hrfrq=mean(hr),hrsum=sum(hr))
 ```
