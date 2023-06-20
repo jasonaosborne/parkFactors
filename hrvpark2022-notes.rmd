@@ -27,7 +27,7 @@ print("by Pitcher Hand (col sums)")
 bpfrqs.era %>% colSums()
 # conditionally on batter hand
 print("Conditionally on Batter Hand")
-allyrs.12vars %>% select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>% prop.table(margin="BAT_HAND_CD") 
+allyrs.12vars %>% select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>% prop.table(margin="BAT_HAND_CD")  -> bhtable; bhtable
 # conditionally on pitcher hand
 print("Conditionally on Pitcher Hand")
 allyrs.12vars %>% select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>% prop.table(margin="PIT_HAND_CD") 
@@ -115,12 +115,108 @@ Ok, let us consider those teams for which the observed and adjusted hr freqs wer
 hrsummary.wide %>% mutate(adjmnt=adjhr-obshr) %>% 
   arrange(abs(adjmnt)) -> hrsummary.wide; hrsummary.wide %>% tail
 ```
-These differences between the observed relative frequencies are small, but the number of plate appearances is large:
+These differences between observed relative frequencies are small, but the number of plate appearances is large:
 ```{r pacount}
 allyrs.12vars %>% group_by(park) %>% summarize(pa=n(),hr=sum(hr)) %>% 
   inner_join(hrsummary.wide) %>% mutate(hrdiff=adjmnt*pa) %>% 
   arrange(abs(hrdiff)) -> hrsummary.wide ; hrsummary.wide %>% tail
 ```
+Each of the six teams that have the largest absolute adjustment have an
+extreme value either for proportion of LHB or proportion of LHB.  First
+the parks that host the _fewest_ plate appearances by LHB: 
+
+```{r idextremes, echo=TRUE, cache=TRUE}
+allyrs.12vars %>% select(park,BAT_HAND_CD) %>% table %>% prop.table(margin="park") %>%
+  as.data.frame() %>% pivot_wider(values_from=Freq,names_from=BAT_HAND_CD) %>% 
+  arrange(L) -> BHbyPark
+BHbyPark %>% head
+```
+\newpage
+Now for the _most_ plate appearances by LHB
+```{r idextremes2, echo=TRUE}
+BHbyPark %>% tail
+```
+Note that DET and TOR both see large downward adjustment and host the 2$^{nd}$ and 3$^{rd}$ lowest LHB frequencies at 38%.
+CLE and MIN see large upward adjustment and host the most and third most
+LHB, respectively (52% and 46% LHB!).
+
+The other two teams for which adjusments are largest have extremes for plate 
+appearances involving LHP:
+```{r idextremePH}
+allyrs.12vars %>% select(park,PIT_HAND_CD) %>% table %>% prop.table(margin="park") %>%
+  as.data.frame() %>% pivot_wider(values_from=Freq,names_from=PIT_HAND_CD) %>% 
+  arrange(L) -> PHbyPark
+PHbyPark %>% head
+PHbyPark %>% tail
+```
+
+Dodger Stadium (LAN) has seen the greatest number of plate appearances with a LHP
+(36%) while Busch (SLN) has seen the second fewest (21%.)  The variation in frequency
+of LHB across parks (38% for ANA up to 52% for CLE) and LHP (21% for MIL up to 36% for LAN) is remarkable.  Lineups and rotations are perhaps more stable than one might
+think given all the personnel changes by high-profile free agents.
+
+\newpage
+# HR v park plots separated by batterhand
+
+The adjusted HR Frequency for LHB is the weighted average
+of observed HR frequencies against LHP and RHP, with weights
+given by the conditionals from `bpcombos` on page 1
+```{r hrvparklhb}
+allyrs.12vars %>% select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>%
+  prop.table(margin="BAT_HAND_CD") -> bhtable
+
+# compute observed hr frqs by park
+allyrs.12vars %>% group_by(park,BAT_HAND_CD,PIT_HAND_CD) %>% 
+ summarize(hrfrq=mean(hr)) %>% 
+  pivot_wider(values_from=hrfrq,
+              names_from=c("BAT_HAND_CD","PIT_HAND_CD")) ->
+  hrsummary.wide
+# compute weighted HR freq for LHB and for RHB
+hrsummary.wide %>% 
+  mutate(adjhrLHB=bhtable[1,1]*L_L+bhtable[1,2]*L_R,
+         adjhrRHB=bhtable[2,1]*R_L+bhtable[2,2]*R_R) ->
+hrsummary.wide
+
+# hrfrs by hand not adjusted for pitcher hand
+allyrs.12vars %>% group_by(park,BAT_HAND_CD) %>% 
+  summarize(hrfrq=mean(hr)) %>% 
+  inner_join(hrsummary.wide) -> hrsummary.wide
+
+# make LHB tall
+hrsummary.wide %>% filter(BAT_HAND_CD=="L") -> hrsummary.wide.LHB
+hrsummary.wide.LHB$park <- factor(hrsummary.wide.LHB$park,
+ levels=hrsummary.wide.LHB$park[order(hrsummary.wide.LHB$adjhrLHB)])
+
+hrsummary.wide.LHB %>%
+  pivot_longer(cols=c("adjhrLHB","hrfrq"),values_to="phr") ->
+  hrsummary.tall.LHB
+
+# plot LHB
+ggplot(hrsummary.tall.LHB) + geom_point(aes(y=phr,x=park,color=name))+
+  theme(axis.text.x=element_text(angle=50)) +
+  ggtitle("HR Freqs for LHB, adjusted and observed \n 2012-2021")
+```
+
+## Similarly for RHB,
+```{r hrvparkrhb}
+hrsummary.wide %>% filter(BAT_HAND_CD=="R") -> hrsummary.wide.RHB
+hrsummary.wide.RHB$park <- factor(hrsummary.wide.RHB$park,
+ levels=hrsummary.wide.RHB$park[order(hrsummary.wide.RHB$adjhrRHB)])
+
+hrsummary.wide.RHB %>%
+  pivot_longer(cols=c("adjhrRHB","hrfrq"),values_to="phr") ->
+  hrsummary.tall.RHB
+
+# plot RHB
+ggplot(hrsummary.tall.RHB) + geom_point(aes(y=phr,x=park,color=name)) +
+  theme(axis.text.x=element_text(angle=50)) +
+  ggtitle("HR Freqs for RHB, adjusted and observed \n 2012-2021")
+```
+
+\newpage
+
+# Leftover page from earlier draft
+
 Were bpcombo freqs for `CLE` different from those of the rest of the league?
 ```{r bpcombos}
 allyrs.12vars %>% select(park,BAT_HAND_CD,PIT_HAND_CD) %>% table %>%
@@ -133,11 +229,9 @@ For whatever reason, there were considerably more PA involving Pitchers and Batt
 of the same hand (RHBRHP or LHBLHP) at Jacobs Field, resulting in upward
 adjustment to era frequencies (so long as CLE conditional HR rates not too different.)
 
-\newpage
-
 For other teams, we compute team combo frequencies relative era combo frequencies
 
-```{r team2era}
+```{r team2era,cache=TRUE}
 allyrs.12vars %>% group_by(BAT_HAND_CD,PIT_HAND_CD) %>% summarize(count=n()) %>%
   ungroup %>% mutate(relFreq=count/sum(count)) -> bptotals
 teambpfrqs.tall %>% inner_join(bptotals) %>% 
@@ -149,4 +243,7 @@ A reminder of which combos lead to the most HRs
 ```{r hrfrq}
 allyrs.12vars %>% group_by(BAT_HAND_CD,PIT_HAND_CD) %>% summarize(hrfrq=mean(hr),hrsum=sum(hr))
 ```
-Now the other adjusteds
+
+\newpage
+
+
