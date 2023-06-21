@@ -5,6 +5,8 @@ output:
   pdf_document
 ---
 
+<!-- the 2022 in the title is a leftover, please ignore it. -->
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo=TRUE,eval=TRUE,message=FALSE,cache=TRUE,fig.align="center",out.width="50%")
 ```
@@ -122,7 +124,7 @@ allyrs.12vars %>% group_by(park) %>% summarize(pa=n(),hr=sum(hr)) %>%
   arrange(abs(hrdiff)) -> hrsummary.wide ; hrsummary.wide %>% tail
 ```
 Each of the six teams that have the largest absolute adjustment have an
-extreme value either for proportion of LHB or proportion of LHB.  First
+extreme value either for proportion of LHB or proportion of LHP.  First
 the parks that host the _fewest_ plate appearances by LHB: 
 
 ```{r idextremes, echo=TRUE, cache=TRUE}
@@ -213,6 +215,39 @@ ggplot(hrsummary.tall.RHB) + geom_point(aes(y=phr,x=park,color=name)) +
   ggtitle("HR Freqs for RHB, adjusted and observed \n 2012-2021")
 ```
 
+\newpage
+
+To investigate variability of adjusted and unadjusted HR freqs and
+also variability among rankings, we will here obtain graphs for the
+2021 season alone.  Firstly, HR freqs averaged over BH, to be followed
+by separate plots for LHB and RHB.
+```{r a2021}
+bpfrqs.2021 <- bpfrq.byyear[,,10] # computed earlier
+allyrs.12vars %>% filter(season==2021) %>% 
+  group_by(park,BAT_HAND_CD,PIT_HAND_CD) %>% 
+  summarize(hrfrq=mean(hr)) %>% pivot_wider(values_from=hrfrq,
+                                names_from=c("BAT_HAND_CD","PIT_HAND_CD")) ->
+  hrsummary.wide.2021
+hrsummary.wide.2021 %>% mutate(adjhr=bpfrqs.2021[1,1]*L_L + bpfrqs.2021[1,2]*L_R + 
+                                bpfrqs.2021[2,1]*R_L + bpfrqs.2021[2,2]*R_R) ->
+  hrsummary.wide.2021 
+# unadjusted
+allyrs.12vars %>% filter(season==2021) %>% group_by(park) %>% summarize(obshr=mean(hr)) -> hrfrqs.bypark.2021
+hrsummary.wide.2021 %>% inner_join(hrfrqs.bypark.2021) -> hrsummary.wide.2021
+hrsummary.wide.2021$park <- factor(hrsummary.wide.2021$park,
+                     levels=hrsummary.wide.2021$park[order(hrsummary.wide.2021$adjhr)])
+hrsummary.wide.2021 %>% pivot_longer(cols=c("adjhr","obshr"),values_to="phr") ->
+  hrsummary.tall.2021
+```
+Now `ggplot` can be used ...
+```{r parkplot2021}
+ggplot(hrsummary.tall.2021) + geom_point(aes(y=phr,x=park,color=name)) + 
+  ggtitle("HR Freqs, adj and observed \n only the 2021 season")
+```
+The data:
+```{r data2021}
+hrsummary.tall.2021 %>% print(n=60)
+```
 \newpage
 
 # Leftover page from earlier draft
