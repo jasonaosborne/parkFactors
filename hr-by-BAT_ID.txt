@@ -1,0 +1,8 @@
+Should we collect all records of hitters who hit 0 home runs
+into a single terrible hitter level?  There 1364 such hitters
+totalling 42133 plate appearances.
+
+I tried to fit
+glm(hr/pa ~ BAT_ID,data=allyrs.12vars.hrpos,family="binomial")
+
+and it caused R to exit and start a new session.  ):

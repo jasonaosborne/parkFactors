@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo=TRUE,eval=TRUE,message=FALSE,cache=TRUE,fig.align="ce
 Let us see how the batter-pitcher combination (`bpcombo`) frequencies have
 varied over time
 
-```{r plot1, out.width="50%", fig.align="center",cache=TRUE,echo=FALSE}
+```{r plot1, out.width="50%", fig.align="center",echo=FALSE}
 load("./allyrs.12vars.RData")
 allyrs.12vars %>% select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>% prop.table -> bpfrqs.era
 # all four combo frqs
@@ -97,7 +97,7 @@ at all independent.  However, we average anyway ...
 A technique worth mentioning in the construction of this plot is to achieve
 an ordering of parks on the horizontal axis according to either the observed
 or adjusted home run rate by so ordering the levels of park as a factor.
-```{r orderpark, cache=TRUE}
+```{r orderpark}
 hrsummary.wide$park <- factor(hrsummary.wide$park,
                               levels=hrsummary.wide$park[order(hrsummary.wide$adjhr)])
 hrsummary.wide %>% pivot_longer(cols=c("adjhr","obshr"),values_to="phr") ->
@@ -127,7 +127,7 @@ Each of the six teams that have the largest absolute adjustment have an
 extreme value either for proportion of LHB or proportion of LHP.  First
 the parks that host the _fewest_ plate appearances by LHB: 
 
-```{r idextremes, echo=TRUE, cache=TRUE}
+```{r idextremes, echo=TRUE}
 allyrs.12vars %>% select(park,BAT_HAND_CD) %>% table %>% prop.table(margin="park") %>%
   as.data.frame() %>% pivot_wider(values_from=Freq,names_from=BAT_HAND_CD) %>% 
   arrange(L) -> BHbyPark
@@ -163,7 +163,7 @@ think given all the personnel changes by high-profile free agents.
 The adjusted HR Frequency for LHB is the weighted average
 of observed HR frequencies against LHP and RHP, with weights
 given by the conditionals from `bpcombos` on page 1
-```{r hrvparklhb}
+```{r hrvparklhb, fig.width=8,out.width="80%"}
 allyrs.12vars %>% select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>%
   prop.table(margin="BAT_HAND_CD") -> bhtable
 
@@ -200,7 +200,7 @@ ggplot(hrsummary.tall.LHB) + geom_point(aes(y=phr,x=park,color=name))+
 ```
 
 ## Similarly for RHB,
-```{r hrvparkrhb}
+```{r hrvparkrhb, fig.width=8,out.width="80%", echo=FALSE}
 hrsummary.wide %>% filter(BAT_HAND_CD=="R") -> hrsummary.wide.RHB
 hrsummary.wide.RHB$park <- factor(hrsummary.wide.RHB$park,
  levels=hrsummary.wide.RHB$park[order(hrsummary.wide.RHB$adjhrRHB)])
@@ -213,7 +213,16 @@ hrsummary.wide.RHB %>%
 ggplot(hrsummary.tall.RHB) + geom_point(aes(y=phr,x=park,color=name)) +
   theme(axis.text.x=element_text(angle=50)) +
   ggtitle("HR Freqs for RHB, adjusted and observed \n 2012-2021")
+hrsummary.wide.era <- hrsummary.wide
 ```
+
+For which ballparks is the ranking for LHB furthest from the ranking for RHB?
+```{r comparelr}
+hsummary.wide.era
+```
+
+
+\newpage 
 
 \newpage
 
@@ -242,13 +251,123 @@ hrsummary.wide.2021 %>% pivot_longer(cols=c("adjhr","obshr"),values_to="phr") ->
 Now `ggplot` can be used ...
 ```{r parkplot2021}
 ggplot(hrsummary.tall.2021) + geom_point(aes(y=phr,x=park,color=name)) + 
-  ggtitle("HR Freqs, adj and observed \n only the 2021 season")
+  ggtitle("HR Freqs, adj and observed \n only the 2021 season") + 
+  theme(axis.text.x=element_text(angle=50))
 ```
 The data:
 ```{r data2021}
-hrsummary.tall.2021 %>% print(n=60)
+hrsummary.tall.2021 %>% print(n=5)
 ```
+Now for 2021 plots specific to batter hand.  Code available upon request!
+
+```{r tmp2, echo=FALSE, fig.width=8,out.width="80%"}
+allyrs.12vars %>% filter(season==2021) %>% 
+  select(BAT_HAND_CD,PIT_HAND_CD) %>% table %>%
+  prop.table(margin="BAT_HAND_CD") -> bhtable
+
+allyrs.12vars %>% filter(season==2021) %>% 
+  group_by(park,BAT_HAND_CD,PIT_HAND_CD) %>%
+  summarize(hrfrq=mean(hr)) %>% 
+  pivot_wider(values_from=hrfrq,
+              names_from=c("BAT_HAND_CD","PIT_HAND_CD")) ->
+  hrsummary.wide.2021
+hrsummary.wide.2021 %>%
+  mutate(adjhrLHB=bhtable[1,1]*L_L + bhtable[1,2]*L_R,
+         adjhrRHB=bhtable[2,1]*R_L + bhtable[2,2]*R_R) ->
+hrsummary.wide.2021
+
+allyrs.12vars %>% filter(season==2021) %>% 
+  group_by(park,BAT_HAND_CD) %>%
+  summarize(hrfrq=mean(hr)) %>% 
+  inner_join(hrsummary.wide.2021) -> hrsummary.wide.2021
+
+hrsummary.wide.2021 %>% filter(BAT_HAND_CD=="L") -> hrsummary.wide.2021.LHB
+hrsummary.wide.2021 %>% filter(BAT_HAND_CD=="R") -> hrsummary.wide.2021.RHB
+
+hrsummary.wide.2021.LHB$park <- factor(hrsummary.wide.2021.LHB$park,
+ levels=hrsummary.wide.2021.LHB$park[order(hrsummary.wide.2021.LHB$adjhrLHB)])
+
+hrsummary.wide.2021.RHB$park <- factor(hrsummary.wide.2021.RHB$park,
+ levels=hrsummary.wide.2021.RHB$park[order(hrsummary.wide.2021.RHB$adjhrRHB)])
+
+hrsummary.wide.2021.LHB %>% 
+  pivot_longer(cols=c("adjhrLHB","hrfrq"),values_to="phr") -> 
+  hrsummary.tall.2021.LHB
+hrsummary.wide.2021.RHB %>% 
+  pivot_longer(cols=c("adjhrRHB","hrfrq"),values_to="phr") -> 
+  hrsummary.tall.2021.RHB
+
+ggplot(hrsummary.tall.2021.LHB) + geom_point(aes(y=phr,x=park,color=name)) + 
+  theme(axis.text.x=element_text(angle=50)) + 
+  ggtitle("HR Freqs for LHB, adj and observed in 2021 only")
+
+ggplot(hrsummary.tall.2021.RHB) + geom_point(aes(y=phr,x=park,color=name)) + 
+  theme(axis.text.x=element_text(angle=50)) + 
+  ggtitle("HR Freqs for RHB, adj and observed in 2021 only")
+```
+
+\newpage 
+
+Compute ranks for comparison of observed v fitted for LHB and for RHB
+```{r rankl, echo=FALSE}
+library(knitr)
+rLHBobs<-rank(hrsummary.wide.2021.LHB$hrfrq)
+rLHBfit<-rank(hrsummary.wide.2021.LHB$adjhrLHB)
+hrsummary.wide.2021.LHB %>% add_column(rLHBobs,rLHBfit) -> ranks.LHB
+ranks.LHB %>% arrange(rLHBfit) %>% select(-2) -> ranks.LHB2
+knitr::kable(ranks.LHB2,digits=3)
+```
+Some observations upon inspection of these plots and ranking  
+* Coors Field is middle of the road (#13) for LHB!
+* Yankee Stadium is indeed homer-friendly to LHB (), even more so if reweighting
+observed home run rates to league-wide matchup frequencies.
+* Jacobs Field (CLE) and T-Moble (SEA) swith places in the ranking after
+adjustment, with CLE seeing a higher rate of observed HRs by LHB than would
+be expected for league-wide matchup frequencies
+* Both parks in Chicago saw more HRs by LHB than would be expected with
+league wide matchup frequencies
+
+```{r rankr, echo=FALSE}
+r_RHB_obs<-rank(-hrsummary.wide.2021.RHB$hrfrq)
+r_RHB_fit<-rank(-hrsummary.wide.2021.RHB$adjhrRHB)
+hrsummary.wide.2021.RHB %>% add_column(r_RHB_obs,r_RHB_fit) -> ranks.RHB
+ranks.RHB %>% select(-4:-7) %>% arrange(r_RHB_fit) %>% print(n=30)
+```
+
+
+
+
+
+
+
 \newpage
+
+
+I'd bet that the agreement between 2021 adjusted HRs and _era_ observed
+HRs is greater than agreement between 2021 observed HRs and _era_ observed HRs.
+
+
+
+```{r exit2,cache=FALSE}
+library(knitr)
+knitr::knit_exit()
+```
+
+```{r compLR, echo=FALSE}
+hrsummary.wide.2021 %>% rename(hrfrq.2021 = hrfrq,
+                               adjLHB.2021=adjhrLHB,
+                               adjRHB.2021=adjhrRHB) %>% 
+  select(c(-2,-4:-7)) -> hrsummary.wide.2021
+
+hrsummary.wide.era %>% select(-4:-7) %>% inner_join(hrsummary.wide.2021) ->
+  hrsummary.wide.both; print(hrsummary.wide.both,n=5)
+
+print(cor(hrsummary.wide.both["BAT_HAND_CD"=="L",3:8]))
+print(cor(hrsummary.wide.both["BAT_HAND_CD"=="R",3:8]))
+```
+
+\newpage 
+
 
 # Leftover page from earlier draft
 
@@ -266,7 +385,7 @@ adjustment to era frequencies (so long as CLE conditional HR rates not too diffe
 
 For other teams, we compute team combo frequencies relative era combo frequencies
 
-```{r team2era,cache=TRUE}
+```{r team2era}
 allyrs.12vars %>% group_by(BAT_HAND_CD,PIT_HAND_CD) %>% summarize(count=n()) %>%
   ungroup %>% mutate(relFreq=count/sum(count)) -> bptotals
 teambpfrqs.tall %>% inner_join(bptotals) %>% 

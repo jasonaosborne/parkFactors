@@ -1,0 +1,39 @@
+---
+title: "adjusting for player effects"
+author: "Jason Osborne and Rich Levine"
+date: "2023-06-21"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Batter Effects
+
+We try to fit a logistic regression model for whether or not a home run is hit that includes effects for who the batter is.
+We will make it more complex in a bit.  To avoid quasi-separation issues, we will condition away plate appearances by players who never hit any home runs.  Or perhaps we will set them to a universal powerless batter. 
+```{r group0hr}
+load("allyrs.12vars.RData")
+allyrs.12vars %>% select(BAT_ID,hr) %>% group_by(BAT_ID) %>%
+  summarize(hrsum=sum(hr),pa=n()) -> batterHRs
+batterHRs %>% filter(hrsum==0) -> batters0HRs
+batters0HRs %>% dim; print(sum(batters0HRs$pa))
+```
+So, there are `r nrow(batters0HRs)` players who never hit a home run in an aggregate of `r sum(batters0HRs$pa)` plate appearances. Let us assign a new level of the
+`BAT_ID` factor to these players, maybe `TomOliver` after a Red Sox CF who went 2000
+career plate appearances without ever hitting one over the fence.
+
+```{r tomOliver} 
+batters0HRs %>% mutate(BAT_ID0="TomOliver") %>% select(BAT_ID,BAT_ID0)-> batters0HRs 
+allyrs.12vars %>% left_join(batters0HRs) -> tmp
+tmp %>% mutate(BAT_ID=ifelse(is.na(BAT_ID),"TomOliver",BAT_ID)) %>% 
+  select(-"BAT_ID0") -> allyrs.12var.posHR
+allyrs.12var.posHR$hr <- factor(allyrs.12var.posHR$hr) 
+allyrs.12var.posHR %>% filter(season==2021) -> d2021
+
+#fit1 <- glm(hr ~ BAT_ID,family="binomial",data=allyrs.12var.posHR)
+fit1 <- glm(hr ~ BAT_ID,family="binomial",data=d2021)
+
+```
+
