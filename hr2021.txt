@@ -1,6 +1,7 @@
 conditional on event_cd in (2,19,20,21,22,23)                                                                                              1
 glossary: hrmean=observed hr/pa
-xBHR and xPHR - hand-specific hrfreq among hitters,pitchers respectively
+xBHR and xPHR - league-wide hand-specific hrfreq among hitters,pitchers respectively
+xBHRmean and xPHRmean - park-specific observed hrfreq of hitters, pitchers who played there
 Mu=estimated Pr(HR), rMu=rank (1-30) of Mu, by bpcombo
 hrmean=observed relfreq of HR, hrsum=observed HRsum, pa=plate apperances
 rhrmean=rank (1-30) of hrmean, by bpcombo
